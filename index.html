@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="ru">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Мои проекты</title>
+  <style>
+    :root {
+      --menu-color: #ffffff;
+      --menu-shadow: rgba(0, 0, 0, 0.6);
+      --menu-bg: rgba(0, 0, 0, 0.25);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      margin: 0;
+      padding: 0;
+      min-height: 100vh;
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    }
+
+    body {
+      min-height: 100vh;
+      background-color: #222;
+      background-size: cover;
+      background-position: center;
+      background-attachment: fixed;
+      transition: background-image 0.6s ease-in-out;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem;
+    }
+
+    .header {
+      text-align: center;
+      margin-bottom: 2.5rem;
+    }
+
+    .header h1 {
+      font-size: clamp(2.2rem, 6vw, 4rem);
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      margin: 0;
+      color: var(--menu-color);
+      text-shadow: 0 2px 12px var(--menu-shadow);
+      transition: color 0.4s ease, text-shadow 0.4s ease;
+    }
+
+    .header p {
+      margin-top: 0.5rem;
+      font-size: 1.1rem;
+      color: var(--menu-color);
+      text-shadow: 0 1px 6px var(--menu-shadow);
+      transition: color 0.4s ease, text-shadow 0.4s ease;
+      opacity: 0.9;
+    }
+
+    .menu {
+      display: flex;
+      flex-direction: column;
+      gap: 0.9rem;
+      width: 100%;
+      max-width: 480px;
+    }
+
+    .menu a {
+      display: block;
+      padding: 1rem 1.5rem;
+      border-radius: 14px;
+      text-decoration: none;
+      font-size: 1.15rem;
+      font-weight: 600;
+      color: var(--menu-color);
+      background: var(--menu-bg);
+      border: 1px solid color-mix(in srgb, var(--menu-color) 25%, transparent);
+      text-shadow: 0 1px 6px var(--menu-shadow);
+      backdrop-filter: blur(6px);
+      transition: all 0.25s ease, color 0.4s ease, text-shadow 0.4s ease, background 0.4s ease, border-color 0.4s ease;
+    }
+
+    .menu a:hover,
+    .menu a:focus-visible {
+      transform: translateY(-2px) scale(1.02);
+      background: color-mix(in srgb, var(--menu-color) 15%, transparent);
+      border-color: color-mix(in srgb, var(--menu-color) 50%, transparent);
+    }
+
+    .empty {
+      color: var(--menu-color);
+      text-shadow: 0 1px 6px var(--menu-shadow);
+      text-align: center;
+      opacity: 0.8;
+      font-size: 1rem;
+    }
+
+    .refresh-btn {
+      margin-top: 2rem;
+      background: var(--menu-bg);
+      border: 1px solid color-mix(in srgb, var(--menu-color) 25%, transparent);
+      color: var(--menu-color);
+      text-shadow: 0 1px 6px var(--menu-shadow);
+      padding: 0.6rem 1.2rem;
+      border-radius: 10px;
+      font-size: 0.9rem;
+      cursor: pointer;
+      backdrop-filter: blur(6px);
+      transition: all 0.25s ease, color 0.4s ease, background 0.4s ease, border-color 0.4s ease;
+    }
+
+    .refresh-btn:hover {
+      background: color-mix(in srgb, var(--menu-color) 15%, transparent);
+    }
+  </style>
+</head>
+
+<body id="page">
+
+  <div class="header">
+    <h1>Мои проекты</h1>
+    <p>Список репозиториев из папки <code>projects/</code></p>
+  </div>
+
+  <nav class="menu" id="menu">
+    <p class="empty">Загрузка...</p>
+  </nav>
+
+  <button class="refresh-btn" id="refresh">Сменить обои</button>
+
+  <script>
+    // ---------- 1. Список проектов ----------
+    async function loadProjects() {
+      const menu = document.getElementById('menu');
+      try {
+        const res = await fetch('projects.json', { cache: 'no-store' });
+        if (!res.ok) throw new Error('no projects.json');
+        const projects = await res.json();
+
+        if (!Array.isArray(projects) || projects.length === 0) {
+          menu.innerHTML = '<p class="empty">Пока нет проектов в папке projects/</p>';
+          return;
+        }
+
+        menu.innerHTML = '';
+        for (const p of projects) {
+          const a = document.createElement('a');
+          a.href = `projects/${encodeURIComponent(p.path)}/`;
+          a.textContent = p.title || p.name;
+          menu.appendChild(a);
+        }
+      } catch (e) {
+        menu.innerHTML = '<p class="empty">Не удалось загрузить список проектов</p>';
+      }
+    }
+
+    // ---------- 2. Случайный фон + контраст ----------
+    function setBackground(url, fallbackColors) {
+      const body = document.getElementById('page');
+      const img = new Image();
+      img.crossOrigin = 'anonymous';
+
+      img.onload = () => {
+        body.style.backgroundImage = `url('${url}')`;
+        try {
+          applyContrast(img);
+        } catch (e) {
+          // CORS may block pixel reading on some sources — fall back gracefully
+          applyFallbackContrast();
+        }
+      };
+
+      img.onerror = () => {
+        applyFallbackContrast();
+      };
+
+      img.src = url;
+    }
+
+    function applyFallbackContrast() {
+      // Light text + dark shadow works for most photographic wallpapers
+      document.documentElement.style.setProperty('--menu-color', '#ffffff');
+      document.documentElement.style.setProperty('--menu-shadow', 'rgba(0,0,0,0.65)');
+      document.documentElement.style.setProperty('--menu-bg', 'rgba(0,0,0,0.3)');
+    }
+
+    // Анализ средней яркости картинки -> выбор светлого/тёмного текста
+    function applyContrast(img) {
+      const canvas = document.createElement('canvas');
+      const w = canvas.width = 32;
+      const h = canvas.height = 32;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, w, h);
+
+      const data = ctx.getImageData(0, 0, w, h).data;
+      let total = 0;
+      for (let i = 0; i < data.length; i += 4) {
+        const r = data[i], g = data[i + 1], b = data[i + 2];
+        // относительная яркость
+        total += (0.299 * r + 0.587 * g + 0.114 * b);
+      }
+      const avg = total / (data.length / 4); // 0..255
+
+      if (avg > 140) {
+        // светлый фон -> тёмный текст
+        document.documentElement.style.setProperty('--menu-color', '#1a1a1a');
+        document.documentElement.style.setProperty('--menu-shadow', 'rgba(255,255,255,0.7)');
+        document.documentElement.style.setProperty('--menu-bg', 'rgba(255,255,255,0.35)');
+      } else {
+        // тёмный фон -> светлый текст
+        document.documentElement.style.setProperty('--menu-color', '#ffffff');
+        document.documentElement.style.setProperty('--menu-shadow', 'rgba(0,0,0,0.65)');
+        document.documentElement.style.setProperty('--menu-bg', 'rgba(0,0,0,0.3)');
+      }
+    }
+
+    function randomWallpaper() {
+      // picsum.photos: открытые случайные фотографии (Unsplash-based), формат веб-обоев
+      const seed = Math.floor(Math.random() * 100000);
+      const w = Math.max(1280, Math.min(window.innerWidth, 1920));
+      const h = Math.max(720, Math.min(window.innerHeight, 1080));
+      return `https://picsum.photos/seed/${seed}/${w}/${h}`;
+    }
+
+    document.getElementById('refresh').addEventListener('click', () => {
+      setBackground(randomWallpaper());
+    });
+
+    setBackground(randomWallpaper());
+    loadProjects();
+  </script>
+
+</body>
+
+</html>
