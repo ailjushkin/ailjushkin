@@ -17,6 +17,7 @@ function App() {
   const [currentTime, setCurrentTime] = useState(0);
   const [volume, setVolume] = useState(0.8); // Начальная громкость 80%
   const [analyzingStage, setAnalyzingStage] = useState(null);
+  const [canvasSize, setCanvasSize] = useState({ width: 0, height: 0 });
 
   // Refs для работы с аудио
   const audioSourceRef = useRef(null); // AudioBufferSourceNode reference
@@ -48,16 +49,45 @@ function App() {
   }, []);
 
   /**
-   * Отрисовка осциллограммы на canvas
+   * Обработчик изменения размера канваса
+   */
+  useEffect(() => {
+    const handleResize = () => {
+      if (canvasRef.current) {
+        const rect = canvasRef.current.getBoundingClientRect();
+        setCanvasSize({ width: rect.width, height: rect.height });
+      }
+    };
+
+    window.addEventListener('resize', handleResize);
+    handleResize(); // Инициализация размера
+
+    return () => {
+      window.removeEventListener('resize', handleResize);
+    };
+  }, []);
+
+  /**
+   * Отрисовка осциллограммы на canvas с учетом разрешения экрана
    * Вызывается после загрузки аудио файла
    */
   useEffect(() => {
     const canvas = canvasRef.current;
-    if (!canvas || !audioBuffer) return;
+    if (!canvas || !audioBuffer || canvasSize.width === 0) return;
+
+    // Учет devicePixelRatio для четкости на высокоразрешенных экранах
+    const dpr = window.devicePixelRatio || 1;
+    
+    // Устанавливаем фактический размер канваса с учетом разрешения
+    canvas.width = canvasSize.width * dpr;
+    canvas.height = canvasSize.height * dpr;
 
     const ctx = canvas.getContext('2d');
-    const width = canvas.width;
-    const height = canvas.height;
+    // Масштабируем контекст, чтобы рисовать в CSS пикселях
+    ctx.scale(dpr, dpr);
+    
+    const width = canvasSize.width;
+    const height = canvasSize.height;
 
     // Очистка канваса
     ctx.fillStyle = '#1a1a2e';
@@ -111,19 +141,30 @@ function App() {
     ctx.fillStyle = '#333';
     ctx.fillRect(0, centerY, width, 1);
 
-    console.log('Осиlлограмма отрисована');
-  }, [audioBuffer]);
+    console.log('Осиlлограмма отрисована с учетом разрешения экрана');
+  }, [audioBuffer, canvasSize]);
 
   /**
    * Отрисовка ползунка воспроизведения на осциллограмме
    */
   useEffect(() => {
-    if (!isPlaying || !canvasRef.current || !audioBuffer) return;
+    if (!isPlaying || !canvasRef.current || !audioBuffer || canvasSize.width === 0) return;
 
     const canvas = canvasRef.current;
     const ctx = canvas.getContext('2d');
-    const width = canvas.width;
-    const height = canvas.height;
+    
+    // Учет devicePixelRatio для четкости на высокоразрешенных экранах
+    const dpr = window.devicePixelRatio || 1;
+    
+    // Устанавливаем фактический размер канваса с учетом разрешения
+    canvas.width = canvasSize.width * dpr;
+    canvas.height = canvasSize.height * dpr;
+
+    // Масштабируем контекст, чтобы рисовать в CSS пикселях
+    ctx.scale(dpr, dpr);
+    
+    const width = canvasSize.width;
+    const height = canvasSize.height;
 
     const drawPlayHead = () => {
       // Очистка канваса
@@ -194,7 +235,7 @@ function App() {
         cancelAnimationFrame(animationFrameRef.current);
       }
     };
-  }, [isPlaying, audioBuffer, currentTime]);
+  }, [isPlaying, audioBuffer, currentTime, canvasSize]);
 
   /**
    * Обработчик загрузки аудио файла
