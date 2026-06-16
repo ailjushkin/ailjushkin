@@ -1,2 +1,4 @@
 [
+{"name": "chords_analyzer", "title": "Браузерный анализатор аккордов guitar.ai", "path": "chords_analyzer"},
+{"name": "guitar_tab_analyzer", "title": "guitar_tab_analyzer", "path": "guitar_tab_analyzer"},
 {"name": "superman_game", "title": "Superman Flight", "path": "superman_game"}]
